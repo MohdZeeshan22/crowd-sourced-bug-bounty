@@ -6,14 +6,10 @@ require("dotenv").config();
 const app = express();
 
 /* =========================
-   ✅ CORS CONFIG (SAFE)
+   ✅ CORS CONFIG (TEMPORARY OPEN FOR DEPLOYMENT)
+   We will restrict this later after frontend deploy
 ========================= */
-app.use(
-  cors({
-    origin: "http://localhost:3000",
-    credentials: true,
-  })
-);
+app.use(cors());
 
 /* =========================
    ✅ BODY PARSER
@@ -37,9 +33,10 @@ mongoose
   .catch((err) => console.error("Mongo Error:", err));
 
 /* =========================
-   ✅ SERVER
+   ✅ SERVER (RAILWAY SAFE)
 ========================= */
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () =>
-  console.log(`🚀 Server running on http://localhost:${PORT}`)
-);
+
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+});
