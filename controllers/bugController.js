@@ -3,37 +3,57 @@ const User = require("../models/User");
 const Transaction = require("../models/Transaction");
 
 /* =========================
-   HACKER
+   HACKER — SUBMIT BUG
 ========================= */
-
-// Submit bug
 exports.submitBug = async (req, res) => {
   try {
     if (req.user.role !== "hacker") {
       return res.status(403).json({ msg: "Only hackers can submit bugs" });
     }
 
-    const { title, description, company } = req.body;
+    const { 
+      title,
+      description,
+      company,
+      severity,
+      testUrl,
+      payload,
+      steps,
+      attachments
+    } = req.body;
 
-    if (!title || !description || !company) {
-      return res.status(400).json({ msg: "All fields are required" });
+    // REQUIRED fields
+    if (!title || !description || !company || !testUrl || !payload) {
+      return res.status(400).json({
+        msg: "All fields including testUrl and payload are required"
+      });
     }
 
+    // CREATE bug
     const bug = await Bug.create({
       title,
       description,
       company,
+      severity: severity || "low",
+      testUrl,
+      payload,
+      steps: steps || "",
+      attachments: attachments || [],
       submittedBy: req.user.id,
       status: "submitted",
     });
 
-    res.json({ msg: "Bug submitted", bug });
+    return res.json({ msg: "Bug submitted successfully", bug });
+
   } catch (err) {
-    res.status(500).json({ msg: err.message });
+    console.error("BUG SUBMISSION ERROR:", err);
+    return res.status(500).json({ msg: err.message });
   }
 };
 
-// Get hacker bugs
+/* =========================
+   HACKER — VIEW OWN BUGS
+========================= */
 exports.getHackerBugs = async (req, res) => {
   try {
     if (req.user.role !== "hacker") {
@@ -41,26 +61,32 @@ exports.getHackerBugs = async (req, res) => {
     }
 
     const bugs = await Bug.find({ submittedBy: req.user.id })
-      .populate("company", "email")
+      .populate("company", "email name")
       .sort({ createdAt: -1 });
 
-    res.json({ bugs });
+    return res.json({ bugs });
+
   } catch (err) {
-    res.status(500).json({ msg: err.message });
+    console.error("HACKER BUG FETCH ERROR:", err);
+    return res.status(500).json({ msg: err.message });
   }
 };
 
-// Hacker wallet (optional if still needed)
+/* =========================
+   HACKER — WALLET
+========================= */
 exports.getHackerWallet = async (req, res) => {
-  const user = await User.findById(req.user.id).select("walletBalance");
-  res.json({ walletBalance: user.walletBalance });
+  try {
+    const user = await User.findById(req.user.id).select("walletBalance");
+    return res.json({ walletBalance: user.walletBalance });
+  } catch (err) {
+    return res.status(500).json({ msg: err.message });
+  }
 };
 
 /* =========================
-   COMPANY
+   COMPANY — VIEW ALL BUGS
 ========================= */
-
-// Get company bugs
 exports.getCompanyBugs = async (req, res) => {
   try {
     if (!["company", "admin"].includes(req.user.role)) {
@@ -68,26 +94,32 @@ exports.getCompanyBugs = async (req, res) => {
     }
 
     const bugs = await Bug.find({ company: req.user.id })
-      .populate("submittedBy", "email")
+      .populate("submittedBy", "email name")
       .sort({ createdAt: -1 });
 
-    res.json({ bugs });
+    return res.json({ bugs });
+
   } catch (err) {
-    res.status(500).json({ msg: err.message });
+    console.error("COMPANY BUG FETCH ERROR:", err);
+    return res.status(500).json({ msg: err.message });
   }
 };
 
-// Approve / Reject / Duplicate
+/* =========================
+   COMPANY — VALIDATE BUG
+========================= */
 exports.validateBug = async (req, res) => {
   try {
     if (!["company", "admin"].includes(req.user.role)) {
-      return res.status(403).json({ msg: "Only company can validate bugs" });
+      return res.status(403).json({ msg: "Only companies can validate bugs" });
     }
 
     const { status, severity, reward, duplicateOf } = req.body;
     const bug = await Bug.findById(req.params.id);
 
-    if (!bug) return res.status(404).json({ msg: "Bug not found" });
+    if (!bug) {
+      return res.status(404).json({ msg: "Bug not found" });
+    }
 
     if (bug.company.toString() !== req.user.id) {
       return res.status(403).json({ msg: "Not your bug" });
@@ -110,8 +142,8 @@ exports.validateBug = async (req, res) => {
 
       bug.status = "duplicate";
       bug.duplicateOf = duplicateOf;
-
       await bug.save();
+
       return res.json({ msg: "Bug marked as duplicate", bug });
     }
 
@@ -139,7 +171,7 @@ exports.validateBug = async (req, res) => {
         return res.status(400).json({ msg: "Insufficient wallet balance" });
       }
 
-      // 💰 Wallet transfer
+      // WALLET TRANSFER
       company.walletBalance -= Number(reward);
       hacker.walletBalance += Number(reward);
 
@@ -151,7 +183,7 @@ exports.validateBug = async (req, res) => {
       await hacker.save();
       await bug.save();
 
-      // 🔥 CREATE TRANSACTION RECORD
+      // TRANSACTION RECORD
       await Transaction.create({
         hacker: hacker._id,
         bug: bug._id,
@@ -163,9 +195,10 @@ exports.validateBug = async (req, res) => {
       return res.json({ msg: "Bug approved & payment recorded", bug });
     }
 
-    res.status(400).json({ msg: "Invalid action" });
+    return res.status(400).json({ msg: "Invalid action" });
+
   } catch (err) {
     console.error("VALIDATION ERROR:", err);
-    res.status(500).json({ msg: err.message });
+    return res.status(500).json({ msg: err.message });
   }
 };

@@ -1,4 +1,5 @@
 const User = require("../models/User");
+const Transaction = require("../models/Transaction");
 
 /* =========================
    GET COMPANY WALLET
@@ -11,11 +12,28 @@ const getCompanyWallet = async (req, res) => {
       return res.status(404).json({ msg: "Company not found" });
     }
 
+    // 🔥 Fetch transactions from Transaction collection
+    const transactions = await Transaction.find({
+      company: req.user.id
+    })
+      .populate("bug", "title")
+      .populate("hacker", "name email")
+      .sort({ createdAt: -1 });
+
+    // 🔥 Calculate total paid
+    const totalPaid = transactions.reduce(
+      (sum, t) => sum + t.amount,
+      0
+    );
+
     res.json({
-      walletBalance: company.walletBalance
+      walletBalance: company.walletBalance,
+      totalPaid,
+      transactions
     });
 
   } catch (err) {
+    console.error("Wallet fetch error:", err);
     res.status(500).json({ msg: err.message });
   }
 };

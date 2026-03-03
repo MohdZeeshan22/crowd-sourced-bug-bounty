@@ -11,8 +11,13 @@ const {
   addFunds
 } = require("../controllers/companyWalletController");
 
+// 🔥 CORRECT IMPORT (your actual file)
+const {
+  runSandboxValidation
+} = require("../controllers/sandboxController");
+
 /* =========================
-   ROLE GUARD (Reusable)
+   ROLE GUARD
 ========================= */
 const companyOnly = (req, res, next) => {
   if (req.user.role !== "company" && req.user.role !== "admin") {
@@ -33,7 +38,7 @@ router.get(
   getCompanyAnalytics
 );
 
-// 💰 Get Wallet
+// 💰 Wallet
 router.get(
   "/wallet",
   auth,
@@ -47,6 +52,14 @@ router.post(
   auth,
   companyOnly,
   addFunds
+);
+
+// 🤖 HTTP Sandbox Validation
+router.post(
+  "/sandbox/:bugId",
+  auth,
+  companyOnly,
+  runSandboxValidation
 );
 
 module.exports = router;
