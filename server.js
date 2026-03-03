@@ -5,22 +5,36 @@ require("dotenv").config();
 
 const app = express();
 
+/* =========================
+   MIDDLEWARE
+========================= */
 app.use(cors());
 app.use(express.json());
 
-/* Health check route */
+/* =========================
+   HEALTH CHECK
+========================= */
 app.get("/", (req, res) => {
   res.status(200).send("Backend is running 🚀");
 });
 
-/* Routes */
+/* =========================
+   ROUTES
+========================= */
 app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/api/bugs", require("./routes/bugRoutes"));
 app.use("/api/wallet", require("./routes/walletRoutes"));
 app.use("/api/company", require("./routes/companyRoutes"));
 
-/* Start server only after DB connects */
+/* =========================
+   DATABASE CONNECTION
+========================= */
 const PORT = process.env.PORT || 5000;
+
+if (!process.env.MONGO_URI) {
+  console.error("❌ MONGO_URI is not defined");
+  process.exit(1);
+}
 
 mongoose
   .connect(process.env.MONGO_URI)
@@ -32,5 +46,6 @@ mongoose
     });
   })
   .catch((err) => {
-    console.error("Mongo Error:", err);
+    console.error("❌ MongoDB Connection Error:", err);
+    process.exit(1);
   });
