@@ -6,8 +6,7 @@ require("dotenv").config();
 const app = express();
 
 /* =========================
-   ✅ CORS CONFIG (TEMPORARY OPEN FOR DEPLOYMENT)
-   We will restrict this later after frontend deploy
+   ✅ CORS CONFIG
 ========================= */
 app.use(cors());
 
@@ -15,6 +14,13 @@ app.use(cors());
    ✅ BODY PARSER
 ========================= */
 app.use(express.json());
+
+/* =========================
+   ✅ HEALTH CHECK ROUTE (IMPORTANT FOR RAILWAY)
+========================= */
+app.get("/", (req, res) => {
+  res.status(200).send("Backend is running 🚀");
+});
 
 /* =========================
    ✅ ROUTES
